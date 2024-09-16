@@ -1,0 +1,403 @@
+   #[1]Fortran Discourse Search
+
+   [2]Fortran Discourse
+
+[3]Are there really any reliable ways to time Fortran code
+
+   [4]rwmsu
+   September 13, 2024, 7:40pm 1
+
+   This thread was prompted by [5]@JohnCampbell suggestion in [6]this
+   thread to use SYSTEM_CLOCK instead off CPU_TIME. In general I agree
+   with his suggestion but wanted to see if it holds true when you use
+   optimization etc. Therefore, I wrote a set of timer routines and a test
+   program [7]see here that times a summation over 1.E8 iterations. I
+   tested on a Linux Mint 21.3 system (Ubuntu 22.04 LTS) on an AMD Ryzen 5
+   5600X. I tested using Fortran’s intrinsic DATE_AND_TIME, SYSTEM_CLOCK,
+   CPU_TIME routines along with C gettimeofday and clock_gettime
+   functions. clock_gettime has several different types of clocks you can
+   specify. The most reliable appears to be the CLOCK_MONOTONE option. I
+   also tried the Linux specific CLOCK_THREAD_CPUTIME_ID option which
+   returns the CPU time for the current thread. When you compile the test
+   program with no optimization (-O0) the program returns fairly
+   consistent times for all the timers (around .25 seconds). However, when
+   you turn on optimization (-O2) the results vary a lot. For the
+   compilers I tried (ifx, ifort, gfortran, nvfortran and AMD flang).
+   SYSTEM_CLOCK and DATE_AND_TIME return a zero elapsed time to 15 decimal
+   places. I expected a drastic drop in time with optimization but not
+   zero. However, given how fast modern processors are I can see how even
+   1.E8 iterations might not be enough work to register a computable
+   elapsed time. Consistent with John’s observation, only the CPU time
+   functions showed anything like a observable elapsed time. Therefore, I
+   will have to agree with John about CPU_TIME. This raises the question
+   are current procedures for timing code when optimization is turned on
+   really sufficient. Please try the test program and let me know if I’m
+   not doing something right and your results on other systems. I think
+   the C gettimeofday and clock_gettime are POSIX so they may work on
+   Windows (but don’t hold your breath). I think if you really need to
+   time code its best to use a dedicated profiler that can descend to the
+   loop level.
+
+   Update:
+
+   I think the reason that SYSTEM_CLOCK and DATE_AND_TIME are showing zero
+   delta time is that there is an interval between when values returned by
+   these routines are actually updated. On my Linux system, this appears
+   to be on the order of 10E-5 to 10E-6 seconds for SYSTEM_CLOCK depending
+   on how often you run the program. What is probably happening is that
+   with -O2 optimization, the time taken in the summation loops is less
+   than the SYSTEM_CLOCK update increment so it will always return the
+   starting and ending times as the same value. I think the moral of this
+   story (at least for me) is don’t trust any of the Fortran timers for
+   doing fine grain profiling of loops or code segments. That job should
+   be done by a dedicated profiling tool like gprof etc. I think most of
+   the Fortran timers are O.K. for computing total run time (ie wall clock
+   time etc) of a program but using them for timing loops is probably not
+   the best idea.
+
+   1 Like
+
+   [8]RonShepard September 13, 2024, 10:55pm 2
+
+   rwmsu:
+
+     I think the reason that SYSTEM_CLOCK and DATE_AND_TIME are showing
+     zero delta time is that there is an interval between when values
+     returned by these routines are actually updated.
+
+   I think that is correct, and also on most compilers that interval
+   depends on the integer and real KINDs of the arguments. If you use
+   int64 arguments, for example, then you will likely get finer grained
+   clock counts.
+
+   As far as which to use, it depends on what you want to time. The cpu
+   time (typically the sum of the cpu times over all threads) is different
+   than the wall clock elapsed time. Consider a program that is waiting
+   for you to respond to a prompt for input. While you are scratching your
+   head wondering what value to type in, the cpu time is not accumulating
+   whereas the wall time is ticking right along.
+
+   [9]rwmsu September 14, 2024, 12:43am 3
+
+   RonShepard:
+
+     As far as which to use, it depends on what you want to time.
+
+   Agreed. Another issue with CPU_TIME is when you run threaded
+   applications. If I remember correctly, it reports total CPU time
+   accumulated by all processors. Thats one reason I looked at the C
+   clock_gettime function. With the CLOCK_MONOTONE clock id it appears to
+   consistely return values that I can almost believe. Can’t say that
+   about CPU_TIME and to a certain extent SYSTEM_CLOCK. Another issue with
+   SYSTEM_CLOCK is that once it reaches its COUNTS_MAX value COUNTS cycles
+   back to zero. However, with 64 bit integers, COUNTS_MAX is such a large
+   number that in most practical applications it will probably never be
+   reached.
+
+   Note. I updated my test_timer program to add a guesstimate of what the
+   update intervals for SYSTEM_CLOCK and DATE_AND_TIME are.
+
+   [10]septc September 14, 2024, 12:46am 4
+
+   Though I also think that there are lots of caveats about measuring
+   time, in the particular case above, isn’t the “zero time” because -O2
+   optimizes away the entire calculation (because sum is not used later)?
+   Indeed, if I insert
+print *, "sum = ", sum`
+
+   before each write statement, the timing becomes about 0.09 sec (*2) on
+   my PC (*1). Below is the comparison of the results (all with
+   gfortran-12.3 + -D__linux__).
+     * Original test_timers.F90 + options = -O0 -march=native
+
+C gettimeofday
+  delta time C ctd                 = 0.354956150054932
+C clock_gettime with MONOTONIC clock
+  delta time C cgt monotonic       = 0.353862497024238
+C clock_gettime with REALTIME clock
+  delta time C cgt realtime        = 0.353832483291626
+C clock_gettime with CLOCK_THREAD_CPUTIME_ID clock (Linux only)
+  delta time C cgt thread cputime  = 0.353834986000000
+DATE_AND_TIME
+  delta time DT                    = 0.353999999817461
+CPU_TIME
+  delta time CPU                   = 0.355595000000000
+SYSTEM_CLOCK
+  delta time SC                    = 0.355354215949774
+
+     * Original test_timers.F90 + options = -O2 -march=native
+
+C gettimeofday
+ delta time C ctd                 = 0.00000000000000
+C clock_gettime with MONOTONIC clock
+ delta time C cgt monotonic       = 0.698491930961609E-7
+C clock_gettime with REALTIME clock
+ delta time C cgt realtime        = 0.238418579101562E-6
+C clock_gettime with CLOCK_THREAD_CPUTIME_ID clock (Linux only)
+ delta time C cgt thread cputime  = 0.100100000000004E-5
+DATE_AND_TIME
+ delta time DT                    = 0.00000000000000
+CPU_TIME
+ delta time CPU                   = 0.999999999999916E-6
+SYSTEM_CLOCK
+  delta time SC                    = 0.307336449623108E-7
+
+     * Modified test_timers.F90 (with print *,sum) + options = -O2
+       -march=native
+
+C gettimeofday
+ sum =    1000100000000.0000
+ delta time C ctd                 = 0.885128974914551E-1
+C clock_gettime with MONOTONIC clock
+ sum =    1000100000000.0000
+ delta time C cgt monotonic       = 0.884691430255771E-1
+C clock_gettime with REALTIME clock
+ sum =    1000100000000.0000
+ delta time C cgt realtime        = 0.889539718627930E-1
+C clock_gettime with CLOCK_THREAD_CPUTIME_ID clock (Linux only)
+ sum =    1000100000000.0000
+ delta time C cgt thread cputime  = 0.890282150000000E-1
+DATE_AND_TIME
+ sum =    1000100000000.0000
+ delta time DT                    = 0.889999999199063E-1
+CPU_TIME
+ sum =    1000100000000.0000
+ delta time CPU                   = 0.888979999999999E-1
+SYSTEM_CLOCK
+  sum =    1000100000000.0000
+ delta time SC                    = 0.889583956450224E-1
+
+   (*1) My PC is Ubuntu22 + Ryzen5700X, but the maximum CPU frequency is
+   suppressed to 3400 MHz via BIOS (no boost) so that the machine will not
+   get very hot.
+
+   (*2) 0.09 sec x 3.4 GHz ~ 3 * 10^8 operations, which seems close to
+   three additions x the number of loops (n = JMAX * IMAX = 10^8), but I’m
+   not sure to what extent this kind of direct counting corresponds to the
+   actual timing. Also there may be some “warm-up” time for CPU to
+   increase the frequency (e.g. 2200 → 3400 MHz for the above PC).
+     __________________________________________________________________
+
+   BTW, I think it will be very useful to gather various info and TIPS for
+   performing benchmarking, profiling, and related tools in some
+   Fortran-lang page (or even in one dedicated thread in the Discourse
+   site), so that people can refer to it conveniently. Then I will
+   definitely read it because I have little experience with such profiling
+   tools yet.
+
+   [11]septc September 14, 2024, 3:40am 5
+
+   To get more info, I have tried changing the number of iterations from
+   the original value (n = 10**8) down to n = 10 for all the timers
+   available in timers.F90 (linked in the first post). From the results
+   below, it seems (for this particular test) that (i) DATE_AND_TIME
+   breaks down very soon; (ii) SYSTEM_CLOCK is among the best and better
+   than CPU_TIME; and (iii) the highest resolution (for one sample of
+   calculation) may be 10 microseconds or so (?).
+(all data with gfortran-12.3 -O2 -march=native + Ryzen5700X / 3.4GHz (fixed))
+gettimeofday
+    n = 10**7 : time = 0.886297225952148E-2
+    n = 10**6 : time = 0.884056091308594E-3
+    n = 10**5 : time = 0.891685485839844E-4
+    n = 10**4 : time = 0.905990600585938E-5
+    n = 10**3 : time = 0.953674316406250E-6
+    n = 10**2 : time = 0.953674316406250E-6
+    n = 10**1 : time = 0.00000000000000
+clock_gettime with MONOTONIC clock
+    n = 10**7 : time = 0.886544678360224E-2
+    n = 10**6 : time = 0.895485281944275E-3
+    n = 10**5 : time = 0.885054469108582E-4
+    n = 10**4 : time = 0.902730971574783E-5
+    n = 10**3 : time = 0.991858541965485E-6
+    n = 10**2 : time = 0.170432031154633E-6
+    n = 10**1 : time = 0.800937414169312E-7
+clock_gettime with REALTIME clock
+    n = 10**7 : time = 0.884652137756348E-2
+    n = 10**6 : time = 0.884294509887695E-3
+    n = 10**5 : time = 0.884532928466797E-4
+    n = 10**4 : time = 0.882148742675781E-5
+    n = 10**3 : time = 0.953674316406250E-6
+    n = 10**2 : time = 0.00000000000000
+    n = 10**1 : time = 0.00000000000000
+clock_gettime with CLOCK_THREAD_CPUTIME_ID clock
+    n = 10**7 : time = 0.884679000000000E-2
+    n = 10**6 : time = 0.884829000000000E-3
+    n = 10**5 : time = 0.894180000000000E-4
+    n = 10**4 : time = 0.986800000000012E-5
+    n = 10**3 : time = 0.177399999999996E-5
+    n = 10**2 : time = 0.100100000000004E-5
+    n = 10**1 : time = 0.981999999999849E-6
+DATE_AND_TIME
+    n = 10**7 : time = 0.900000007823110E-2
+    n = 10**6 : time = 0.100000016391277E-2
+    n = 10**5 : time = 0.00000000000000
+    n = 10**4 : time = 0.00000000000000
+    n = 10**3 : time = 0.00000000000000
+    n = 10**2 : time = 0.00000000000000
+    n = 10**1 : time = 0.00000000000000
+CPU_TIME
+    n = 10**7 : time = 0.884799999999999E-2
+    n = 10**6 : time = 0.889000000000000E-3
+    n = 10**5 : time = 0.899999999999998E-4
+    n = 10**4 : time = 0.100000000000000E-4
+    n = 10**3 : time = 0.300000000000018E-5
+    n = 10**2 : time = 0.200000000000005E-5
+    n = 10**1 : time = 0.999999999999916E-6
+SYSTEM_CLOCK
+    n = 10**7 : time = 0.886124838143587E-2
+    n = 10**6 : time = 0.884152948856354E-3
+    n = 10**5 : time = 0.885073095560074E-4
+    n = 10**4 : time = 0.887643545866013E-5
+    n = 10**3 : time = 0.931322574615479E-6
+    n = 10**2 : time = 0.129453837871552E-6
+    n = 10**1 : time = 0.298023223876953E-7
+
+   [12]rwmsu September 14, 2024, 12:22pm 6
+
+   Thanks. These are very interesting results. I also thought that the
+   compiler might be optimizing away the summation but was not sure how to
+   prove it. I think your results reinforces the point I was trying to
+   make with this exercise that you need to be aware of the differences
+   and potential problems that can occur between the various intrinsic
+   Fortran timing functions if you want to profile loops etc at a fine
+   grain level. For Linux users, I think the THREAD_CPUTIME option for
+   clock_gettime might be of use if you want an estimate of CPU time per
+   processor. Obviously, using DATE_AND_TIME is not the best option but
+   its one I’ve seen used before.
+
+   1 Like
+
+   [13]tyranids September 15, 2024, 2:31am 7
+
+   I always use system_clock with int64 arguments. That gives you the
+   higher precision timing you want, and make sure your program actually
+   uses the output of whatever computation. Usually I just write a value
+   to the console after doing whatever benchmark. If you don’t actually
+   use the variable you’re working on in the benchmark code, a good
+   compiler will optimize it away completely when you go above -O0
+
+   [14]Federchen September 15, 2024, 12:41pm 8
+
+   Timing is essential in (my) coarray programming as well. But in context
+   with Unified Acceleration programming I do first check if a (future)
+   device/accelerator does actually support a clock at all, and if not so
+   use alternative (inexact) ways to measure time, e.g. using (explicit)
+   parallel loop iteration counts. See the following code snippet from my
+   channel implementation (still working on this) to initiate a
+   self-adjusting timer:
+!****************************************************************
+  ! initiate the timer for the ChannelReceive
+  call cpu_time (fo % m_r_cpuTime1)
+  call system_clock(count_rate = fo % m_r_countRate)
+
+  !**************
+  ! initiate the timer for the ChannelReceive (using system_clock):
+  if (fo % m_r_countRate == 0) then
+    fo % m_l_system_clock_supported = .false. ! system/device has no clock
+  else
+    fo % m_l_system_clock_supported = .true. ! system/device has a clock
+  end if
+
+  !**************
+  ! initiate the timer for the ChannelReceive (using cpu_time):
+  if (fo % m_r_cpuTime1 < 0) then ! system/device does not support cpu_time
+    fo % m_l_cpu_time_supported = .false.
+  else ! system/device does support cpu_time
+    fo % m_l_cpu_time_supported = .true.
+  end if
+
+  !**************
+  if (fo % m_l_system_clock_supported) then ! the system/device does support sys
+tem_clock / has a clock
+    call system_clock(count = fo % m_i_time1) ! initiate the timer
+    fo % m_r_timeLimitInSec = 0.1 ! each channel's IsReceive does reinitiate the
+ timer
+    fo % m_l_timeLimitInSecCustomizedSetting = .false.
+    fo % m_l_automaticTimeLimitAdjustmentEnabled = .true.
+    fo % m_r_maxValueInSecForAutomaticTimeLimitAdjustment = 8.0
+    ! default value, customized setting through the set_timeLimitInSeconds proce
+dure
+    ! below
+  else if (fo % m_l_cpu_time_supported) then ! system/device does support cpu_ti
+me
+    call cpu_time (fo % m_r_cpuTime1)
+    fo % m_r_timeLimitInSec = 0.1 ! each channel's IsReceive does reinitiate the
+ timer
+    fo % m_l_timeLimitInSecCustomizedSetting = .false.
+    fo % m_l_automaticTimeLimitAdjustmentEnabled = .true.
+    fo % m_r_maxValueInSecForAutomaticTimeLimitAdjustment = 8.0
+    ! default value, customized setting through the set_timeLimitInSeconds proce
+dure
+    ! below
+  else ! system_clock and cpu_time are not supported
+    fo % m_i_parallelLoopIterationCounter = 0
+    fo % m_i_loopIterationLimit = 1000
+    fo % m_l_automaticIterationLimitAdjustmentEnabled = .true.
+    fo % m_i_maxValueForAutomaticIterationLimitAdjustment = 25000
+  end if
+  !**************
+
+
+Related Topics
+
+   Topic Replies Views Activity
+   [15]Why Cpu_time function gives incorrect time
+   [16]Help
+
+   5 571 November 10, 2023
+   [17]How to show the true wall time instead of cpu_time?
+
+   29 7882 October 29, 2023
+   [18]Why is my code compiled with GFortran on Windows slower than on
+   Ubuntu?
+
+   51 5478 May 3, 2022
+   [19]Slow thread creation with nested loops in GFortran
+
+   [20]Help
+
+   5 668 January 21, 2023
+   [21]The Oregon Trail
+
+   [22]Humor
+
+   6 644 April 13, 2021
+
+     * [23]Home
+     * [24]Categories
+     * [25]Guidelines
+     * [26]Terms of Service
+     * [27]Privacy Policy
+
+   Powered by [28]Discourse, best viewed with JavaScript enabled
+
+References
+
+   1. https://fortran-lang.discourse.group/opensearch.xml
+   2. https://fortran-lang.discourse.group/
+   3. https://fortran-lang.discourse.group/t/are-there-really-any-reliable-ways-to-time-fortran-code/8602
+   4. https://fortran-lang.discourse.group/u/rwmsu
+   5. https://fortran-lang.discourse.group/u/johncampbell
+   6. https://fortran-lang.discourse.group/t/effect-of-contiguous-attribute-for-dummy-array-arguments/8592/10
+   7. https://github.com/rweed/ModForUtils/tree/main/timers
+   8. https://fortran-lang.discourse.group/u/RonShepard
+   9. https://fortran-lang.discourse.group/u/rwmsu
+  10. https://fortran-lang.discourse.group/u/septc
+  11. https://fortran-lang.discourse.group/u/septc
+  12. https://fortran-lang.discourse.group/u/rwmsu
+  13. https://fortran-lang.discourse.group/u/tyranids
+  14. https://fortran-lang.discourse.group/u/Federchen
+  15. https://fortran-lang.discourse.group/t/why-cpu-time-function-gives-incorrect-time/6754
+  16. https://fortran-lang.discourse.group/c/help/5
+  17. https://fortran-lang.discourse.group/t/how-to-show-the-true-wall-time-instead-of-cpu-time/2189
+  18. https://fortran-lang.discourse.group/t/why-is-my-code-compiled-with-gfortran-on-windows-slower-than-on-ubuntu/1666
+  19. https://fortran-lang.discourse.group/t/slow-thread-creation-with-nested-loops-in-gfortran/5062
+  20. https://fortran-lang.discourse.group/c/help/5
+  21. https://fortran-lang.discourse.group/t/the-oregon-trail/1059
+  22. https://fortran-lang.discourse.group/c/humor/12
+  23. https://fortran-lang.discourse.group/
+  24. https://fortran-lang.discourse.group/categories
+  25. https://fortran-lang.discourse.group/guidelines
+  26. https://fortran-lang.discourse.group/tos
+  27. https://fortran-lang.discourse.group/privacy
+  28. https://www.discourse.org/

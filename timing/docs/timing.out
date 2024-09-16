@@ -1,0 +1,74 @@
+The program name is build/gfortran_E167FD2A985B468F/app/timing
+
+This file was compiled by GCC version 13.2.1 20240426
+
+using the options 
+ -I build/gfortran_87E2AE0597D39913
+ -mtune=generic
+ -march=x86-64
+ -g
+ -Wall
+ -Wextra
+ -Werror=implicit-interface
+ -fPIC
+ -fmax-errors=1
+ -fbounds-check
+ -fcheck=array-temps
+ -fbacktrace
+ -fcoarray=single
+ -fimplicit-none
+ -ffree-form
+ -J build/gfortran_87E2AE0597D39913
+
+ original input string is ....  This     is      a     test  
+ processed output string is ...Thisisatest T
+ processed output string is ...Thisisatest T
+ processed output string is ...Thisisatest T
+ processed output string is ...Thisisatest T
+:BASELINE:
+Elapsed date (sec) ::0.31502544879913330
+Elapsed time (sec) ::0.314645082
+CPU time     (sec) ::0.250000000
+Percentage         :: 79.45
+ this     is  a     test
+:NOSPACE1:
+Elapsed date (sec) ::0.80997347831726074
+Elapsed time (sec) ::0.809657931
+CPU time     (sec) ::0.671000004
+Percentage         :: 82.87
+ thisisatest
+:NOSPACE2:
+Elapsed date (sec) ::1.5670001506805420
+Elapsed time (sec) ::1.56671572
+CPU time     (sec) ::1.34399998
+Percentage         :: 85.78
+ thisisatest
+:NOSPACE3:
+Elapsed date (sec) ::0.72600692510604858
+Elapsed time (sec) ::0.726056099
+CPU time     (sec) ::0.546999991
+Percentage         :: 75.34
+ thisisatest
+:NOSPACE4:
+Elapsed date (sec) ::1.5309914946556091
+Elapsed time (sec) ::1.53092980
+CPU time     (sec) ::1.20299995
+Percentage         :: 78.58
+ thisisatest
+Name:	timing
+State:	S (sleeping)
+Tgid:	12248
+Pid:	12263
+PPid:	12248
+Uid:	197609 197609 197609 197609
+Gid:	197609 197609 197609 197609
+VmSize:	    5440 kB
+VmLck:	       0 kB
+VmRSS:	    5888 kB
+VmData:	    1088 kB
+VmStk:	       0 kB
+VmExe:	      64 kB
+VmLib:	    3072 kB
+SigPnd:	0000000000000000
+SigBlk:	0000000000080000
+SigIgn:	0000000000000006
