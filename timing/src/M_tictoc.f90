@@ -79,6 +79,8 @@ integer(kind=int64)                      :: lun_
 real                                     :: elapsed_time
 real(kind=realtime)                      :: elapsed_date_and_time
 real                                     :: cpu_time
+character(len=105)                       :: line
+
    if(present(lun))then
       lun_=lun
    else
@@ -90,7 +92,9 @@ real                                     :: cpu_time
 
    if(present(string)) write( lun_,gen ) string
 
-   write( lun_,gen)              'Elapsed date (sec) ::',elapsed_date_and_time
+   !write(line,'(f100.3)')elapsed_date_and_time
+   !write( lun_,gen)              'Elapsed date (sec) ::',trim(adjustl(line))
+   write( lun_,'(a,f0.3)')       'Elapsed dat  (sec) ::',elapsed_date_and_time
    write( lun_,gen)              'Elapsed time (sec) ::',elapsed_time
    write( lun_,gen)              'CPU time     (sec) ::',cpu_time
    write( lun_,'(a,1x,f0.2)')    'Percentage         ::',(cpu_time/elapsed_time)*100
