@@ -37,6 +37,22 @@ integer,parameter :: how_many_times=1000000
    call timeit('NOSPACE3',nospace3)
    call timeit('NOSPACE4',nospace4)
 
+block
+use,intrinsic :: iso_fortran_env, only : int8,int16,int32,int64,real32,real64,real128
+use,intrinsic :: iso_fortran_env, only : stderr=>ERROR_UNIT, stdin=>INPUT_UNIT, stdout=>OUTPUT_UNIT
+character(len=*),parameter :: g='(*(g0,1x))'
+integer(kind=int64) :: icount64, icount_rate64, icount_max64
+real(kind=real64) :: frequency
+   print g,':SYSTEM_CLOCK PRECISION:'
+   call system_clock(icount64, icount_rate64, icount_max64)
+   print g,'COUNT_MAX(64bit)='    ,  icount_max64                
+   print g,'COUNT_RATE(64bit)='   ,  icount_rate64               
+   frequency=real(icount_max64,kind=int64)/real(icount_rate64,kind=real64)
+   print g,'FLIP EVERY N(secs)='  ,  frequency ,' (days)==>',frequency/86400_real64
+   print g,'CURRENT COUNT(64bit)=' , icount64
+   print g,'next flip(secs)=',dble(icount_max64-icount64)/icount_rate64,'(days)==>', dble(icount_max64-icount64)/icount_rate64/86400
+endblock
+
    call catstat()
 contains
 

@@ -5,12 +5,12 @@ implicit none
 private
 
 type timer
-   real(real64)   :: cpu_start
-   real(real64)   :: cpu_end
-   integer(int64) :: clock_start
-   integer(int64) :: clock_end
-   integer        :: dat_start(8)
-   integer        :: dat_end(8)
+   real(kind=real64)   :: cpu_start
+   real(kind=real64)   :: cpu_end
+   integer(kind=int64) :: clock_start
+   integer(kind=int64) :: clock_end
+   integer             :: dat_start(8)
+   integer             :: dat_end(8)
    contains
        procedure  ::  tic        =>  clock_tic
        procedure  ::  toc        =>  clock_toc
@@ -74,12 +74,14 @@ end subroutine clock_toc
 subroutine clock_print(this,string,lun)
 class(timer),intent(in)                  :: this
 character(len=*),intent(in),optional     :: string
-integer(kind=int64),intent(in),optional  :: lun
-integer(kind=int64)                      :: lun_
-real                                     :: elapsed_time
+integer(kind=int32),intent(in),optional  :: lun
+integer(kind=int32)                      :: lun_
+real(kind=real64)                        :: elapsed_time
 real(kind=realtime)                      :: elapsed_date_and_time
-real                                     :: cpu_time
-character(len=105)                       :: line
+real(kind=real64)                        :: cpu_time
+character(len=105)                       :: biggest
+integer(kind=int64)                      :: count_rate
+
 
    if(present(lun))then
       lun_=lun
@@ -92,10 +94,12 @@ character(len=105)                       :: line
 
    if(present(string)) write( lun_,gen ) string
 
-   !write(line,'(f100.3)')elapsed_date_and_time
-   !write( lun_,gen)              'Elapsed date (sec) ::',trim(adjustl(line))
    write( lun_,'(a,f0.3)')       'Elapsed dat  (sec) ::',elapsed_date_and_time
-   write( lun_,gen)              'Elapsed time (sec) ::',elapsed_time
+   ! find how many characters to use for integers
+   call system_clock(count_rate=count_rate) ! Find the time rate
+   ! try to make a reasonable format for the number of digits of precision
+   write(biggest,'("(a,f0.",i0,")")')ceiling(log10(real(count_rate,kind=real64)))
+   write( lun_,biggest)          'Elapsed time (sec) ::',elapsed_time
    write( lun_,gen)              'CPU time     (sec) ::',cpu_time
    write( lun_,'(a,1x,f0.2)')    'Percentage         ::',(cpu_time/elapsed_time)*100
 
@@ -104,26 +108,26 @@ end subroutine clock_print
 function clock_wallclock(this) result(elapsed_time)
 class(timer)        :: this
 integer(kind=int64) :: count_rate
-real                :: elapsed_time
-real                :: cpu_time
+real(kind=real64)   :: elapsed_time
+real(kind=real64)   :: cpu_time
    call system_clock(count_rate=count_rate) ! Find the time rate
-   elapsed_time = real(this%clock_end-this%clock_start)/real(count_rate)
+   elapsed_time = real(this%clock_end-this%clock_start,kind=real64)/real(count_rate,kind=real64)
 end function clock_wallclock
 
 function  clock_cputime(this)  result(cpu_time)
 class(timer)        :: this
-real                :: cpu_time
-   cpu_time = real(this%cpu_end-this%cpu_start)
+real(kind=real64)   :: cpu_time
+   cpu_time = real(this%cpu_end-this%cpu_start,kind=real64)
 end function clock_cputime
 
 function  clock_dattime(this)  result(cpu_time)
 class(timer)        :: this
-real                :: cpu_time
+real(kind=real64)   :: cpu_time
 real(kind=realtime) :: e,s
 integer             :: ierr
    call date_to_julian(this%dat_end,e,ierr)
    call date_to_julian(this%dat_start,s,ierr)
-   cpu_time = real((e-s)*86400)
+   cpu_time = real((e-s)*86400,kind=real64)
 end function clock_dattime
 
 subroutine date_to_julian(dat,julian,ierr)
