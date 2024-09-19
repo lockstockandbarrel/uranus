@@ -12,9 +12,9 @@ So for those times where do-it-yourself timing is the better choice you
 will find a few of the most useful standard Fortran intrinsics for basic
 macro-level timing are
 
-+ [system_clock](https://github.com/urbanjost/M_intrinsics/blob/master/md/SYSTEM_CLOCK.md)
-+ [cpu_time](https://github.com/urbanjost/M_intrinsics/blob/master/md/CPU_TIME.md)
-+ [date_and_time](https://github.com/urbanjost/M_intrinsics/blob/master/md/DATE_AND_TIME.md)
+ * [system_clock](https://github.com/urbanjost/M_intrinsics/blob/master/md/SYSTEM_CLOCK.md)
+ * [cpu_time](https://github.com/urbanjost/M_intrinsics/blob/master/md/CPU_TIME.md)
+ * [date_and_time](https://github.com/urbanjost/M_intrinsics/blob/master/md/DATE_AND_TIME.md)
 
 It is not much of an overstatement to say these routines  are
 implementation-dependent and often generally not a good choice for
@@ -22,23 +22,23 @@ testing timing of short events.
 
 On the other hand, 
 
- + the calls can generally be left in the code to
+ * the calls can generally be left in the code to
    provide general run-time timing information when used judiciously,
    (ie. at a macro level).
    
- + If already using pre-processors it is usually very easy to make the
+ * If already using pre-processors it is usually very easy to make the
    calls only in development and debug versions and to selectively exclude
    them in production releases to assist opimization.
    
- + they are usually a great tool for timing throw-away development programs
+ * they are usually a great tool for timing throw-away development programs
    used to time different versions of a procedure you already have identified
    as being important to optimize.
    
- + they can be used portably in testing frameworks to capture and identify
+ * they can be used portably in testing frameworks to capture and identify
    large changes in performance between releases and different compilers
    and compiler switch affects.
    
- + Since they are intrinsics a big advantage is that they are available
+ * Since they are intrinsics a big advantage is that they are available
    on virtually all platforms, unlike most higher-level profiling
    packages.
 
@@ -70,7 +70,7 @@ included here.
 A simple example program calling the module illustrates using it
 to time a loop of calls. 
 
-```fortran
+~~~~~~~~~~ {: lang=fortran}
 program testit
 use M_tictoc,only : timer, say_hello
 !
@@ -118,35 +118,35 @@ call clock%toc()
 call clock%print()
 
 end program testit
-```
+~~~~~~~~~~
 Expecting there to be no difference in timing?
 On a lot of platforms there will be a rather large one
 for 32-bit in particular. For example:
-```text
-run date.....: 2024-09-18T21:09:12-04:00
-program name.:./testit
-compiled by..: GCC version 13.2.1 20240426
-using options:
-
- -mtune=generic 
- -march=x86-64
-
-time sqrt(r) versus r**0.5
-
-time calls to sqrt:
-0.274877907E+12
-Elapsed dat  (sec) ::.405
-Elapsed time (sec) ::.405112200
-CPU time     (sec) ::0.31200000000000000
-Percentage         :: 77.02
-
-time calls to x**0.5:
-0.274877907E+12
-Elapsed dat  (sec) ::2.586
-Elapsed time (sec) ::2.585699600
-CPU time     (sec) ::1.7660000000000000
-Percentage         :: 68.30
-```
+~~~~~~~~~~
+    run date.....: 2024-09-18T21:09:12-04:00
+    program name.:./testit
+    compiled by..: GCC version 13.2.1 20240426
+    using options:
+    
+     -mtune=generic 
+     -march=x86-64
+    
+    time sqrt(r) versus r**0.5
+    
+    time calls to sqrt:
+    0.274877907E+12
+    Elapsed dat  (sec) ::.405
+    Elapsed time (sec) ::.405112200
+    CPU time     (sec) ::0.31200000000000000
+    Percentage         :: 77.02
+    
+    time calls to x**0.5:
+    0.274877907E+12
+    Elapsed dat  (sec) ::2.586
+    Elapsed time (sec) ::2.585699600
+    CPU time     (sec) ::1.7660000000000000
+    Percentage         :: 68.30
+~~~~~~~~~~
 So maybe there is a reason there is a redundant-looking procedure
 for square roots (Note some compilers will recognize the mathematical
 equivalency and call an optimal solution!).
@@ -162,7 +162,7 @@ system calls, I/O layout and cacheing, context switching .,, .
 But, a little module might be handy for the many simpler cases ...
 
 ### A module defining a clock type and related procedures
-```fortran
+~~~~~~~~~~ {: lang=fortran}
 module M_tictoc
 use,intrinsic :: iso_fortran_env, only : int32,int64,real32,dp=>real64
 use,intrinsic :: iso_fortran_env, only : stdout=>OUTPUT_UNIT
@@ -400,4 +400,4 @@ character(len=25) :: iso_8601
 end function iso_8601
 
 end module M_tictoc
-```
+~~~~~~~~~~
