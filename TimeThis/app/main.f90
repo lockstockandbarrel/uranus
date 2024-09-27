@@ -1,5 +1,5 @@
 program TimeThis_exe
-use M_time, only : fmtdate
+use M_time, only : fmtdate, locale
 use,intrinsic :: iso_fortran_env, only : int64
 use, intrinsic :: iso_fortran_env, only : stderr=>ERROR_UNIT
 
@@ -13,6 +13,7 @@ integer(kind=int64)          :: jtime(2)
 
    call get_cmd(command,ier) ! get the command including an attempt to requote quoted strings
    if(ier.eq.0)then
+      call locale('language')
       call millijulian(jtime(1),starttime)
       if(command.ne.'')ier=run(command)
       call millijulian(jtime(2),endtime)
