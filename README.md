@@ -97,6 +97,14 @@ describes how to use it when you have more than one test program.
 ### User time versus System time
 
 ### Other commonly available C timing routines
+### Call counting in lieu of or complementing timing
+### Other aspects of code analysis 
+
+such as memory high-water marks and thrashing, system calls, I/O performance and cacheing,
+context switching .,, .
+
+### Automatic instrumentation
+### Vendor-supplied tooling
 
 ### More comprehensive timing-related modules
 

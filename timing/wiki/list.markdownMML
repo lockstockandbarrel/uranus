@@ -1,0 +1,13 @@
+
+* [**MPI_Wtime**](https://docs.open-mpi.org/en/v5.0.x/man-openmpi/man3/MPI_Wtime.3.html) - The MPI library comes
+  with a set of timing procedures for timing parallel code
+* [**Beliavsky Lists](https://github.com/Beliavsky/Fortran-code-on-GitHub) - A very extensive list of Fortran code
+  on github that can be searched for "timing", "time", ... . Several large packages contain timing subpackages you
+  can find here.
+* [gprof](https://ftp.gnu.org/old-gnu/Manuals/gprof-2.9.1/html_mono/gprof.html) - for large codes it can be a major
+  task just to find where the code is spending time. Profiling tools like gprof(1) are indispensible tools for tackling
+  large project and may job be one compiler switch away from being in your hands. 
+
+  **Some of the most powerful profiling tools are supplied by vendors**. Check your compiler-specific documentation
+  or think about browsing for commercial optimization tools and assistance for the big jobs.
+
