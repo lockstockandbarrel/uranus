@@ -59,7 +59,7 @@ character(len=40)              :: scratch
    secsleft=secsleft-hours*ONE_HOUR
    minutes=secsleft/ONE_MINUTE            ! get whole number of minutes
    secsleft=secsleft-minutes*ONE_MINUTE
-   write(scratch,'(i0,"-",i2.2,":",i2.2,":",i2.2,".",i0)')days,hours,minutes,secsleft,left
+   write(scratch,'(i0,"-",i2.2,":",i2.2,":",i2.2,".",i3.3)')days,hours,minutes,secsleft,left
    dhms=trim(scratch)
 end function millisec2days
 
